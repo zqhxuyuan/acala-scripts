@@ -6,7 +6,7 @@ import {
   AcalaPrimitivesTradingPair,
 } from '@acala-network/types/interfaces/types-lookup'
 
-import { FixedPointNumber } from '@acala-network/sdk-core'
+import { FixedPointNumber, Token } from '@acala-network/sdk-core'
 import { Wallet } from '@acala-network/sdk/wallet'
 import { fetchEntriesToArray } from '@open-web3/util'
 
@@ -19,7 +19,6 @@ runner()
   .withApiPromise()
   .run(async ({ api, apiAt }) => {
     console.log(`
-Error Mint aUSD On Account: min(Current Balance, Total Claim)
 Current Balance: Balance when running this script
 Before Balance: Balance before the incident #1638215
 After Balance: Balance after the pause #1639493
@@ -64,6 +63,9 @@ After Diff: Current Balance - After Balance
 
     for (const [who, amount] of processed) {
       all[who] -= amount
+      if (all[who] === 0n) {
+        delete all[who]
+      }
     }
 
     const beforeBlock = 1638215
@@ -303,7 +305,7 @@ After Diff: Current Balance - After Balance
       queryData(blockNow, addresses),
     ])
 
-    const reclaimAusd = {} as Record<string, bigint>
+    const total = {} as Record<string, { value: bigint; token: Token }>
 
     for (let i = 0; i < addresses.length; i++) {
       const name = addresses[i]
@@ -336,16 +338,62 @@ After Diff: Current Balance - After Balance
         free[name].after = f
       }
 
-      for (const { name: token, now } of Object.values(free)) {
-        if (token === 'LP aUSD-IBTC AUSD') {
-          reclaimAusd[name] = (reclaimAusd[name] || 0n) + BigInt(now || 0n)
+      for (const { name: tokenName, token, now, before } of Object.values(free)) {
+        const beforeDiff = (now ?? 0n) - BigInt(before ?? 0n)
+        if (beforeDiff < 0n) {
+          continue
+        }
+        if (tokenName === 'ACA' || tokenName === 'Collateral ACA') {
+          if (!total['ACA']) {
+            total['ACA'] = { value: 0n, token }
+          }
+          total['ACA'].value += beforeDiff
+        }
+        if (tokenName === 'LDOT' || tokenName === 'Collateral LDOT') {
+          if (!total['LDOT']) {
+            total['LDOT'] = { value: 0n, token }
+          }
+          total['LDOT'].value += beforeDiff
+        }
+        if (tokenName === 'INTR' || tokenName === 'Collateral INTR') {
+          if (!total['INTR']) {
+            total['INTR'] = { value: 0n, token }
+          }
+          total['INTR'].value += beforeDiff
+        }
+        if (tokenName === 'DOT' || tokenName === 'Collateral DOT') {
+          if (!total['DOT']) {
+            total['DOT'] = { value: 0n, token }
+          }
+          total['DOT'].value += beforeDiff
+        }
+        if (tokenName === 'iBTC') {
+          if (!total['iBTC']) {
+            total['iBTC'] = { value: 0n, token }
+          }
+          total['iBTC'].value += beforeDiff
+        }
+        if (tokenName === 'LP aUSD-IBTC iBTC') {
+          if (!total['LP aUSD-IBTC iBTC']) {
+            total['LP aUSD-IBTC iBTC'] = { value: 0n, token }
+          }
+          total['LP aUSD-IBTC iBTC'].value += beforeDiff
+        }
+        if (tokenName === 'LP aUSD-IBTC AUSD') {
+          if (!total['LP aUSD-IBTC AUSD']) {
+            total['LP aUSD-IBTC AUSD'] = { value: 0n, token }
+          }
+          total['LP aUSD-IBTC AUSD'].value += beforeDiff
+        }
+        if (tokenName.startsWith('Debit')) {
+          if (!total['Debit']) {
+            total['Debit'] = { value: 0n, token }
+          }
+          total['Debit'].value += beforeDiff
         }
       }
 
-      // reclaimAusd[name] = reclaimAusd[name] > all[name] ? all[name] : reclaimAusd[name]
-
       console.log('Address:', name)
-      console.log('Error mint aUSD on Account:', formatBalance(all[name]))
       table(
         Object.values(free)
           .filter((x) => x.now || x.before || x.after)
@@ -361,24 +409,10 @@ After Diff: Current Balance - After Balance
       console.log()
     }
 
+    console.log('Total')
     table(
-      Object.entries(all)
-        .map(([who]) => ({
-          who,
-          'Error Mint aUSD On Account': formatBalance(reclaimAusd[who]),
-        }))
-        .concat([
-          {
-            who: 'Total',
-            'Error Mint aUSD On Account': formatBalance(Object.values(reclaimAusd).reduce((a, b) => a + (b ?? 0n), 0n)),
-          },
-        ])
+      Object.fromEntries(
+        Object.entries(total).map(([type, val]) => [type, formatBalance(val.value, val.token.decimals)])
+      )
     )
-
-    const honzonTreasury = '23M5ttkmR6KcnvsNJdmYTpLo9xfc54g8uCk55buDfiJPon69'
-    const honzonTreasuryAmount = (
-      await api.query.tokens.accounts(honzonTreasury, stableCurrency.toChainData())
-    ).free.toBigInt()
-
-    console.log('HonzonTreasuryAmount', honzonTreasury, formatBalance(honzonTreasuryAmount, stableCurrency.decimals))
   })
