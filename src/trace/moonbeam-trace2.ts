@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { Wallet } from '@acala-network/sdk/wallet'
+// import { Wallet } from '@acala-network/sdk/wallet'
 // import { decodeAddress, encodeAddress } from '@polkadot/keyring'
 import { gql, request } from 'graphql-request'
 // import { u8aToHex } from '@polkadot/util'
@@ -12,14 +12,11 @@ import runner from '../runner'
 runner()
   .requiredNetwork(['acala'])
   .withApiPromise()
-  .run(async ({ api }) => {
-    new Wallet(api)
-
+  .run(async ({ _api }) => {
     // moonbeam start block
     const beforeBlock = 1646592
-    // const afterBlock = 1639493
 
-    // moonbeam assets map
+    // Moonbeam assets map
     const tokenMap = new Map([
       ['120637696315203257380661607956669368914', 'xcIBTC'],
       ['110021739665376159354538090254163045594', 'xcaUSD'],
@@ -40,6 +37,7 @@ runner()
       ['GLMR', 18],
     ])
 
+    // Moonbeam contracts map
     const lpMap = new Map([
       ['0xd95cab0ed89269390f2ad121798e6092ea395139', 'STELLA: xcaUSD/WGLMR'],
       ['0xa927e1e1e044ca1d9fe1854585003477331fe2af', 'STELLA: WGLMR/xcDOT'],
@@ -58,26 +56,6 @@ runner()
       ['0x9de8171bebfa577d6663b594c60841fe096eff97', 'STELLA Rewarder'],
       ['0x7bc8b1b5aba4df3be9f9a32dae501214dc0e4f3f', 'NFT/ERC721'],
     ])
-
-    // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
-
-    function format_address(address: string, base_address: string): string {
-      if (address === base_address) {
-        return '👽'
-      } else {
-        const mapping = lpMap.get(address)
-        if (typeof mapping === 'undefined') {
-          return address
-        } else {
-          return mapping
-        }
-      }
-    }
-
-    function extract_event_index(id: string): number {
-      const splits = id.split('-')
-      return Number(splits[1])
-    }
 
     // ERC20 address on moombeam
     // the amount is calculated on Acala side which xtokens transfer out to Moonbeam.
@@ -110,6 +88,26 @@ runner()
       // ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
       // ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
     ])
+
+    // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
+
+    function format_address(address: string, base_address: string): string {
+      if (address === base_address) {
+        return '👽'
+      } else {
+        const mapping = lpMap.get(address)
+        if (typeof mapping === 'undefined') {
+          return address
+        } else {
+          return mapping
+        }
+      }
+    }
+
+    function extract_event_index(id: string): number {
+      const splits = id.split('-')
+      return Number(splits[1])
+    }
 
     const query = gql`
       query q($acc1: JSON, $acc2: JSON) {
