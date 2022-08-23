@@ -90,12 +90,21 @@ runner()
     ])
 
     const query = gql`
-      query q($acc: JSON, $evt: String) {
+      query q($acc1: JSON, $acc2: JSON) {
         events(
           where: {
-            name_eq: $evt,
-            block: {height_gte: ${beforeBlock}},
-            args_jsonContains: $acc,
+            OR: [
+              {
+                name_in: ["Assets.Transferred", "Balances.Transfer"],
+                block: {height_gte: ${beforeBlock}},
+                args_jsonContains: $acc1,
+              }
+              {
+                name_in: ["Assets.Transferred", "Balances.Transfer"],
+                block: {height_gte: ${beforeBlock}},
+                args_jsonContains: $acc2,
+              }
+            ]
           }
         ) {
           block {
@@ -113,7 +122,7 @@ runner()
       }
   `
 
-    const processResult = (result: any, kind: string, from = 'from', to = 'to') => {
+    const processResult = (result: any, addr: string, from = 'from', to = 'to') => {
       return (result.events as any[]).map((x: any) => ({
         height: x.block.height,
         extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
@@ -122,7 +131,7 @@ runner()
         to: to ? x.args[to] : '',
         asset: tokenMap.get(x.args.assetId) || 'GLMR',
         amount: x.args.amount,
-        kind,
+        kind: from === addr ? 'out' : 'in',
       }))
     }
 
@@ -176,33 +185,14 @@ runner()
         }
       }
 
-      const [result1, result2, result3, result4] = await Promise.all([
-        request('https://moonbeam.explorer.subsquid.io/graphql', query, {
-          acc: { to: addr },
-          evt: 'Assets.Transferred',
-        }),
-        request('https://moonbeam.explorer.subsquid.io/graphql', query, {
-          acc: { from: addr },
-          evt: 'Assets.Transferred',
-        }),
-        request('https://moonbeam.explorer.subsquid.io/graphql', query, {
-          acc: { to: addr },
-          evt: 'Balances.Transfer',
-        }),
-        request('https://moonbeam.explorer.subsquid.io/graphql', query, {
-          acc: { from: addr },
-          evt: 'Balances.Transfer',
-        }),
-      ])
+      const result1 = await request('https://moonbeam.explorer.subsquid.io/graphql', query, {
+        acc1: { to: addr },
+        acc2: { from: addr },
+      })
 
-      const [events1, events2, events3, events4] = await Promise.all([
-        processResult(result1, 'in'),
-        processResult(result2, 'out'),
-        processResult(result3, 'in'),
-        processResult(result4, 'out'),
-      ])
+      const events1 = processResult(result1, addr)
 
-      const allEvents = events1.concat(events2).concat(events3).concat(events4)
+      const allEvents = events1
       // allEvents.sort((a, b) => a.height - b.height)
 
       const data1 = []
