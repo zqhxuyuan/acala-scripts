@@ -31,6 +31,7 @@ runner()
     ])
 
     // ERC20 address on moombeam
+    // the amount is calculated on Acala side which xtokens transfer out to Moonbeam.
     const addresses = new Map([
       ['0x80e639e6a2c90b05cdce2701a66ef096852093c8', '841325000000000000'],
       ['0x029dc993d0053b717a69cac26157f4ea466a907a', '816336247612289280'],
@@ -127,6 +128,12 @@ runner()
     }
 
     const result = []
+    const summary = {
+      total_crossed: BigInt(0),
+      total_spended: BigInt(0),
+      total_current: BigInt(0),
+      total_uncover: BigInt(0),
+    }
     let print_single = false
     for (const [addr, ausd_total] of addresses) {
       if (typeof process.argv[2] !== 'undefined') {
@@ -198,11 +205,22 @@ runner()
       result.push({
         address: addr,
         crossed: formatBalance(ausd_total, 12),
-        spended: formatBalance(ausd_spent, 12),
+        spended: formatBalance(-ausd_spent, 12),
         current: formatBalance(ausd_balance, 12),
         uncover: formatBalance(uncover_amount, 12),
       })
+      summary.total_crossed += BigInt(ausd_total)
+      summary.total_spended += BigInt(ausd_spent)
+      summary.total_current += BigInt(ausd_balance)
+      summary.total_uncover += uncover_amount
     }
+    result.push({
+      address: 'Total',
+      crossed: formatBalance(summary.total_crossed, 12),
+      spended: formatBalance(-summary.total_spended, 12),
+      current: formatBalance(summary.total_current, 12),
+      uncover: formatBalance(summary.total_uncover, 12),
+    })
 
     // print summary
     if (!print_single) {
