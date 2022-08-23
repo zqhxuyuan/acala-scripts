@@ -114,15 +114,14 @@ runner()
         address: address,
       })
       if (typeof data.assets === 'undefined') {
-        return '0'
+        return 0
       } else {
         const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.assets
-
         const ausd_filter = assets.filter((asset1) => asset1.symbol === 'xcaUSD')
         if (typeof ausd_filter === 'undefined' || ausd_filter.length === 0) {
-          return '0'
+          return 0
         } else {
-          return '${ausd_filter[0].balance}'
+          return ausd_filter[0].balance
         }
       }
     }
