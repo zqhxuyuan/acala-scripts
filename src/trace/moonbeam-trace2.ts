@@ -24,22 +24,39 @@ runner()
       ['120637696315203257380661607956669368914', 'xcIBTC'],
       ['110021739665376159354538090254163045594', 'xcaUSD'],
       ['42259045809535163221576417993425387648', 'xcDOT'],
-      ['101170542313601871197860408087030232491', 'INTR'],
+      ['101170542313601871197860408087030232491', 'xcINTR'],
       ['224821240862170613278369189818311486111', 'xcACA'],
       ['32615670524745285411807346420584982855', 'PARA'],
       ['132685552157663328694213725410064821485', 'xcPHA'],
     ])
+    const decimalsMap = new Map([
+      ['xcIBTC', 8],
+      ['xcaUSD', 12],
+      ['xcDOT', 10],
+      ['INTR', 10],
+      ['xcACA', 12],
+      ['PARA', 12],
+      ['xcPHA', 12],
+      ['GLMR', 18],
+    ])
 
     const lpMap = new Map([
-      ['0xd95cab0ed89269390f2ad121798e6092ea395139', 'xcaUSD → WGLMR'],
-      ['0xa927e1e1e044ca1d9fe1854585003477331fe2af', 'WGLMR → xcDOT'],
-      ['0x4c5f99045af91d2b6d4fa0ea89fc47cf42711555', 'WGLMR → xcIBTC'],
-      ['0x70085a09d30d6f8c4ecf6ee10120d1847383bb57', 'WGLMR'],
-      ['0xfa36fe1da08c89ec72ea1f0143a35bfd5daea108', 'xcDOT'],
+      ['0xd95cab0ed89269390f2ad121798e6092ea395139', 'STELLA: xcaUSD/WGLMR'],
+      ['0xa927e1e1e044ca1d9fe1854585003477331fe2af', 'STELLA: WGLMR/xcDOT'],
+      ['0x4c5f99045af91d2b6d4fa0ea89fc47cf42711555', 'STELLA: WGLMR/xcIBTC'],
+      ['0xd3dfb90f7996a97f9f394e130342485e37dd28f7', 'STELLA: WGLMR/xcINTR'],
+      ['0x70085a09d30d6f8c4ecf6ee10120d1847383bb57', 'StellaSwap Router'],
+      ['0xacc15dc74880c9944775448304b263d191c6077f', 'WGLMR'],
+      ['0xfa36fe1da08c89ec72ea1f0143a35bfd5daea108', 'stDOT'],
       ['0x091608f4e4a15335145be0a279483c0f8e4c7955', 'mGLMR'],
       ['0xd22da948c0ab3a27f5570b604f3adef5f68211c3', 'mDOT'],
       ['0xb7b5d3659ad213478bc8bfb94d064d0efdda8f7c', 'xcACA'],
       ['0xf3a5454496e26ac57da879bf3285fa85debf0388', 'STELLA'],
+      ['0xeb237cf62eda6a179561952840f17a7056d647f6', 'SwapRouter'],
+      ['0x96b244391d98b62d19ae89b1a4dccf0fc56970c7', 'BeamSwap Router'],
+      ['0x94f9eb420174b8d7396a87c27073f74137b40fe2', 'ZLK: xcDOT/WGLMR'],
+      ['0x9de8171bebfa577d6663b594c60841fe096eff97', 'STELLA Rewarder'],
+      ['0x7bc8b1b5aba4df3be9f9a32dae501214dc0e4f3f', 'NFT/ERC721'],
     ])
 
     // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
@@ -55,6 +72,11 @@ runner()
           return mapping
         }
       }
+    }
+
+    function extract_event_index(id: string): number {
+      const splits = id.split('-')
+      return Number(splits[1])
     }
 
     // ERC20 address on moombeam
@@ -85,8 +107,8 @@ runner()
       ['0x08abb2e7b586d80543b61daa91a9d134234d26d5', '889742268083292'],
       ['0x5f9febf1f2a99fe11edad119462db23f28a6ddbb', '431000000000000'],
       ['0x2b8221f97766b0498f4ac578871d088100176749', '264603693438244'],
-      ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
-      ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
+      // ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
+      // ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
     ])
 
     const query = gql`
@@ -107,6 +129,7 @@ runner()
             ]
           }
         ) {
+          id,
           block {
             height
           }
@@ -124,14 +147,15 @@ runner()
 
     const processResult = (result: any, addr: string, from = 'from', to = 'to') => {
       return (result.events as any[]).map((x: any) => ({
+        id: extract_event_index(x.id),
         height: x.block.height,
         extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
         extrinsicHash: x.extrinsic.hash,
-        from: from ? x.args[from] : '',
-        to: to ? x.args[to] : '',
+        from: x.args[from],
+        to: x.args[to],
         asset: tokenMap.get(x.args.assetId) || 'GLMR',
         amount: x.args.amount,
-        kind: from === addr ? 'out' : 'in',
+        kind: x.args['from'] === addr ? 'in' : 'out',
       }))
     }
 
@@ -160,6 +184,17 @@ runner()
         } else {
           return ausd_filter[0].balance
         }
+      }
+    }
+    const fetch_address_info = async (address: string) => {
+      const {
+        data: { data },
+      } = await axios_api.post('/api/v2/scan/search', {
+        key: address,
+      })
+      return {
+        evm_contract: data.account.is_evm_contract,
+        balance: data.account.balance,
       }
     }
 
@@ -193,7 +228,13 @@ runner()
       const events1 = processResult(result1, addr)
 
       const allEvents = events1
-      // allEvents.sort((a, b) => a.height - b.height)
+      allEvents.sort((a, b) => {
+        if (a.height === b.height) {
+          return a.id - b.id
+        } else {
+          return a.height - b.height
+        }
+      })
 
       const data1 = []
       const total = {} as Record<string, { token: string; value: bigint }>
@@ -203,18 +244,16 @@ runner()
 
         // raw data
         data1.push({
+          evt: e.id,
           extrinsic: e.extrinsicIndex,
           from: format_address(e.from, addr),
           to: format_address(e.to, addr),
           asset: e.asset,
-          amount: e.amount,
+          amount: formatBalance(e.amount, decimalsMap.get(e.asset)),
         })
 
         // if destination address is not LP, but individual, then we added it for later second level dig
         if (addr !== e.to && typeof lpMap.get(e.to) === 'undefined') {
-          // console.log("transfer out:" + e.to)
-          // dest_individuals[address] = addr,
-          // dest_individuals.dest.push("".concat(e.to))
           dest_individualstal[addr] = dest_individualstal[addr] || { dest: new Set<string>([]) }
           dest_individualstal[addr].dest.add(e.to)
         }
@@ -223,9 +262,6 @@ runner()
       if (print_one || print_all) {
         console.log('address: >>', addr)
         table(data1)
-        if (print_one) {
-          break
-        }
       }
 
       let ausd_spent = BigInt(0)
@@ -233,14 +269,13 @@ runner()
         ausd_spent = total['xcaUSD'].value
       }
       const ausd_balance = await fetch_ausd_balance(addr)
-      // uncover_amount = ausd_total - ausd_spent.abs() - ausd_balance
-      const uncover_amount = BigInt(ausd_total) + BigInt(ausd_spent) - BigInt(ausd_balance)
+      const uncover_amount = BigInt(ausd_total) - BigInt(ausd_spent) - BigInt(ausd_balance)
       result.push({
         address: addr,
         crossed: formatBalance(ausd_total, 12),
-        spended: formatBalance(-ausd_spent, 12),
+        spended: formatBalance(ausd_spent, 12),
         current: formatBalance(ausd_balance, 12),
-        uncover: formatBalance(uncover_amount, 12),
+        uncover: uncover_amount < 1_000_000_000_000 ? 0 : formatBalance(uncover_amount, 12),
       })
       summary.total_crossed += BigInt(ausd_total)
       summary.total_spended += BigInt(ausd_spent)
@@ -248,21 +283,31 @@ runner()
       summary.total_uncover += uncover_amount
     }
 
+    // direct transfer to individual addresss
+    const direct_transfers = []
     for (const [key, dests] of Object.entries(dest_individualstal)) {
-      console.log('address:', key)
-      table(dests.dest)
+      for (const dest of dests.dest) {
+        const account_info = await fetch_address_info(dest)
+        direct_transfers.push({
+          origin_address: key,
+          dest_address: dest,
+          evm_contract: account_info.evm_contract,
+          dest_balance: account_info.balance,
+        })
+      }
     }
+    table(direct_transfers)
 
     result.push({
       address: 'Total',
       crossed: formatBalance(summary.total_crossed, 12),
-      spended: formatBalance(-summary.total_spended, 12),
+      spended: formatBalance(summary.total_spended, 12),
       current: formatBalance(summary.total_current, 12),
       uncover: formatBalance(summary.total_uncover, 12),
     })
 
     // print summary if not specified address.
-    if (!print_all && !print_one) {
+    if (!print_one) {
       table(result)
     }
   })

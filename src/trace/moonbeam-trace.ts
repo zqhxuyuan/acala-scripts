@@ -40,6 +40,7 @@ runner()
       ['0xd22da948c0ab3a27f5570b604f3adef5f68211c3', 'mDOT'],
       ['0xb7b5d3659ad213478bc8bfb94d064d0efdda8f7c', 'xcACA'],
       ['0xf3a5454496e26ac57da879bf3285fa85debf0388', 'STELLA'],
+      ['0xeb237cf62eda6a179561952840f17a7056d647f6', 'SwapRouter'],
     ])
 
     // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
