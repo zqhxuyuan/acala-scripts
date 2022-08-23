@@ -6,14 +6,14 @@ import { gql, request } from 'graphql-request'
 
 // import { Token } from '@acala-network/sdk-core'
 import { formatBalance, table } from '../log'
-import runner from '../runner'
 import axios from 'axios'
+import runner from '../runner'
 
 runner()
   .requiredNetwork(['acala'])
   .withApiPromise()
   .run(async ({ api }) => {
-    const wallet = new Wallet(api)
+    new Wallet(api)
 
     // moonbeam start block
     const beforeBlock = 1646592
@@ -86,10 +86,9 @@ runner()
   `
 
     const processResult = (result: any, kind: string, from = 'from', to = 'to') => {
-      return
-      ;(result.events as any[]).map(async (x: any) => ({
+      return (result.events as any[]).map((x: any) => ({
         height: x.block.height,
-        extrinsicIndex: '${x.block.height}-${x.extrinsic.indexInBlock}',
+        extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
         extrinsicHash: x.extrinsic.hash,
         from: from ? x.args[from] : '',
         to: to ? x.args[to] : '',
@@ -117,9 +116,9 @@ runner()
       if (typeof data.assets === 'undefined') {
         return '0'
       } else {
-        let assets: [{ symbol: string; decimals: number; balance: BigInt; assert_id: string }] = data.assets
+        const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.assets
 
-        let ausd_filter = assets.filter((asset1) => asset1.symbol === 'xcaUSD')
+        const ausd_filter = assets.filter((asset1) => asset1.symbol === 'xcaUSD')
         if (typeof ausd_filter === 'undefined' || ausd_filter.length === 0) {
           return '0'
         } else {
@@ -132,7 +131,7 @@ runner()
     let print_single = false
     for (const [addr, ausd_total] of addresses) {
       if (typeof process.argv[2] !== 'undefined') {
-        let address_input = process.argv[2]
+        const address_input = process.argv[2]
         if (addr !== address_input) {
           continue
         } else {
