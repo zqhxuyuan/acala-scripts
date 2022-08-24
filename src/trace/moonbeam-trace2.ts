@@ -61,7 +61,7 @@ const lpMap = new Map([
   ['0x94f9eb420174b8d7396a87c27073f74137b40fe2', 'ZLK: xcDOT/WGLMR'],
   ['0x9de8171bebfa577d6663b594c60841fe096eff97', 'STELLA Rewarder'],
   ['0x7bc8b1b5aba4df3be9f9a32dae501214dc0e4f3f', 'NFT/ERC721'],
-  ['0xdfb7e426fbbbc83ccac49012f49e2a355d9353e8', '???']
+  ['0xdfb7e426fbbbc83ccac49012f49e2a355d9353e8', '???'],
 ])
 
 // ERC20 address on Moonbeam that xtokens transfer out from Acala.
@@ -70,12 +70,12 @@ const addresses = new Map([
   // ['0x80e639e6a2c90b05cdce2701a66ef096852093c8', '841325000000000000'],
   // ['0x029dc993d0053b717a69cac26157f4ea466a907a', '816336247612289280'],
   // ['0xb82ed2d0dfcd3ad43b3cbfab1f5e9c316f283f9c', '696772724164928000'],
-  // ['0x57f73c4bff8ebe0fdd91c666fd304804d50fc218', '533926559077803008'],
-  // ['0xa22868cfd826d0fcf543bdf1814e556e69903f11', '334484705589422144'],
+  ['0x57f73c4bff8ebe0fdd91c666fd304804d50fc218', '533926559077803008'],
+  ['0xa22868cfd826d0fcf543bdf1814e556e69903f11', '334484705589422144'],
   ['0x30c4abab7ec022c27022aa39f687984e5acba13d', '308597168863638272'],
   ['0x07d6e8987a17b95eee44fbd2b7bb65c34442a5c7', '305375328803483584'],
-  ['0xb600e3b53dc0b8a941b92301f4411ac2e31ae4a2', '211192000000000000'],
-  ['0x8ff448ed0c027dbe9f5add62e6faee439eac0259', '197064140914770368'],
+  // ['0xb600e3b53dc0b8a941b92301f4411ac2e31ae4a2', '211192000000000000'],
+  // ['0x8ff448ed0c027dbe9f5add62e6faee439eac0259', '197064140914770368'],
   // ['0x1cb3c6b77fde279cf7403a5c0ae2d5fc9d356a55', '127873035149662560'],
   // ['0xebaee4e53e5c286c4b5f0027777eb72bc8b94bf7', '100650000003096976'],
   // ['0x356eb354aea711854e1d69a36643e181a1da8ba5', '50000000000000000'],
@@ -181,7 +181,7 @@ const fetch_asset_balance = async (address: string, asset = 'xcaUSD') => {
   } = await axios_api.post('/api/scan/account/tokens', {
     address: address,
   })
-  let balance = 0n;
+  let balance = 0n
   // GLMR in native
   if (asset === parachain_info.get(parachain)?.defaultToken) {
     const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.native
@@ -202,25 +202,60 @@ const fetch_asset_balance = async (address: string, asset = 'xcaUSD') => {
         balance = 0n
       } else {
         balance = filter[0].balance
-      }    
+      }
     }
   }
   return balance
 }
 
-// const fetch_asset_balances = async (address: string, assets: string[] = ['xcaUSD']) => {
-//   const {
-//     data: { data },
-//   } = await axios_api.post('/api/scan/account/tokens', {
-//     address: address,
-//   })
-//   const balances = []
-//   for (let i=0; i<assets.length;i++) {
-//     // TODO: passing data
-//     balances[i] = await fetch_asset_balance(address, assets[i])
-//   }
-//   return balances
-// }
+const fetch_asset_balances = async (address: string, assets: string[]) => {
+  const {
+    data: { data },
+  } = await axios_api.post('/api/scan/account/tokens', {
+    address: address,
+  })
+  const balances = []
+  for (let i = 0; i < assets.length; i++) {
+    const asset = assets[i]
+    let balance = 0n
+    // GLMR in native
+    if (asset === parachain_info.get(parachain)?.defaultToken) {
+      const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.native
+      const filter = assets.filter((asset1) => asset1.symbol === asset)
+      if (typeof filter === 'undefined' || filter.length === 0) {
+        balance = 0n
+      } else {
+        balance = filter[0].balance
+      }
+    } else {
+      // assets: [xcaUSD, xcDOT, xcINTR, xcACA, xcIBTC]
+      // ERC20: [xcDOT]
+      if (asset === 'xcDOT') {
+        const assets: [{ symbol: string; decimals: number; balance: bigint; contract: string }] = data.ERC20
+        const filter = assets.filter((asset1) => asset1.symbol === asset)
+        if (typeof filter === 'undefined' || filter.length === 0) {
+          balance = 0n
+        } else {
+          balance = filter[0].balance
+        }
+      } else {
+        if (typeof data.assets === 'undefined') {
+          balance = 0n
+        } else {
+          const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.assets
+          const filter = assets.filter((asset1) => asset1.symbol === asset)
+          if (typeof filter === 'undefined' || filter.length === 0) {
+            balance = 0n
+          } else {
+            balance = filter[0].balance
+          }
+        }
+      }
+    }
+    balances[i] = balance
+  }
+  return balances
+}
 
 // const fetch_address_info = async (address: string) => {
 //   const {
@@ -235,13 +270,15 @@ const fetch_asset_balance = async (address: string, asset = 'xcaUSD') => {
 // }
 
 // Gloabl share variable
-let summary_results = [{}] as [{
-  address: string,
-  crossed: bigint,
-  spended: bigint,
-  current: bigint,
-  uncover: bigint,
-}]
+let summary_results = [{}] as [
+  {
+    address: string
+    crossed: bigint
+    spended: bigint
+    current: bigint
+    uncover: bigint
+  }
+]
 
 let summary_record = {
   total_crossed: BigInt(0),
@@ -249,6 +286,23 @@ let summary_record = {
   total_current: BigInt(0),
   total_uncover: BigInt(0),
 }
+let asset_info = [{}] as [
+  {
+    address: string
+    asset: string
+    in: string
+    out: string
+    diff: string
+  }
+]
+let outasset_info = [{}] as [
+  {
+    address: string
+    dest_addr: string
+    asset: string
+    amount: string
+  }
+]
 
 const direct_addresses = {} as Record<string, { dest: Set<string> }>
 
@@ -278,10 +332,10 @@ const get_events = async (addr: string, print_record = false) => {
       to: e.to,
       asset: e.asset,
       amount: e.amount,
-      kind: e.kind
+      kind: e.kind,
     })
   }
-  console.log("\nQuery Transfers:", addr, "...")
+  // console.log("\nQuery Transfers:", addr, "...")
 
   if (print_record) {
     const format_records = []
@@ -293,29 +347,49 @@ const get_events = async (addr: string, print_record = false) => {
         to: format_address(e.to, addr),
         asset: e.asset,
         amount: formatBalance(e.amount, decimalsMap.get(e.asset)),
-        kind: e.kind
+        kind: e.kind,
       })
     }
     table(format_records)
   }
-  return records;
+  return records
 }
 
 function reset() {
-  summary_results = [{}] as [{
-    address: string,
-    crossed: bigint,
-    spended: bigint,
-    current: bigint,
-    uncover: bigint,
-  }]
+  summary_results = [{}] as [
+    {
+      address: string
+      crossed: bigint
+      spended: bigint
+      current: bigint
+      uncover: bigint
+    }
+  ]
   summary_record = {
     total_crossed: BigInt(0),
     total_spended: BigInt(0),
     total_current: BigInt(0),
     total_uncover: BigInt(0),
   }
+  // DO NOT RESET, AS IT'S USED AS NEXT LEVEL DIG.
   // direct_addresses = {} as Record<string, { dest: Set<string> }>
+  asset_info = [{}] as [
+    {
+      address: string
+      asset: string
+      in: string
+      out: string
+      diff: string
+    }
+  ]
+  outasset_info = [{}] as [
+    {
+      address: string
+      dest_addr: string
+      asset: string
+      amount: string
+    }
+  ]
 }
 
 // Processing one address
@@ -323,19 +397,19 @@ const process_one = async (
   addr: string,
   ausd: string,
   work_result: {
-    evt: number,
-    extrinsic: string,
-    from: string,
-    to: string,
-    asset: string,
-    amount: string,
+    evt: number
+    extrinsic: string
+    from: string
+    to: string
+    asset: string
+    amount: string
     kind: string
   }[]
 ) => {
   const direct_asset_amounts = {} as Record<string, { balance: bigint }>
 
   // Calculate total AUSD spented.
-  const total = {} as Record<string, { in: bigint, out: bigint, value: bigint }>
+  const total = {} as Record<string, { in: bigint; out: bigint; value: bigint }>
   for (const e of work_result) {
     total[e.asset] = total[e.asset] || { in: 0n, out: 0n, value: 0n }
     // Normally out is less than in, for convenient calculate uncover, +out, -in
@@ -346,55 +420,47 @@ const process_one = async (
     }
     total[e.asset].value += e.kind === 'out' ? BigInt(e.amount) : -BigInt(e.amount)
 
-     // Get all addresses that's not LP/Contract for further dig.
+    // Get all addresses that's not LP/Contract for further dig.
     if (addr === e.from && typeof lpMap.get(e.to) === 'undefined') {
       direct_addresses[addr] = direct_addresses[addr] || { dest: new Set<string>([]) }
       direct_addresses[addr].dest.add(e.to)
 
       // Calculate the transfered asset to destination address
-      const key = e.to.concat("-").concat(e.asset).concat("-").concat(addr)
+      const key = e.to.concat('-').concat(e.asset).concat('-').concat(addr)
       direct_asset_amounts[key] = direct_asset_amounts[key] || { balance: BigInt(0) }
       direct_asset_amounts[key].balance += BigInt(e.amount)
     }
   }
   // we could calcuate other asset
   let ausd_spent = BigInt(0)
-  if (typeof total['xcaUSD'] !== 'undefined') { // may not have xcaUSD output.
+  if (typeof total['xcaUSD'] !== 'undefined') {
+    // may not have xcaUSD output.
     ausd_spent = total['xcaUSD'].value
   }
 
   // print all kind of asset diff in and out.
-  const asset_info = []
   for (const [asset, info] of Object.entries(total)) {
     const decimal = decimalsMap.get(asset)
-    const balance = await fetch_asset_balance(addr, asset)
     asset_info.push({
+      address: addr,
       asset,
       in: formatBalance(info.in, decimal),
       out: formatBalance(info.out, decimal),
       diff: formatBalance(info.value, decimal),
-      current: formatBalance(balance, decimal),
     })
   }
-  console.log("asset in/out:")
-  table(asset_info)
 
-  // print outgoing transfers to non contract users
-  const outasset_info = []
+  // print outgoing transfers to non contract evm account.
   for (const [key, info] of Object.entries(direct_asset_amounts)) {
-    const key3 = key.split("-")
+    const key3 = key.split('-')
     const dest = key3[0]
     const asset = key3[1]
-    // const source = key3[2]
     outasset_info.push({
+      address: addr,
       dest_addr: dest,
       asset: asset,
       amount: formatBalance(info.balance, decimalsMap.get(asset)),
     })
-  }
-  if (outasset_info.length > 0) {
-    console.log("asset to dest:")
-    table(outasset_info)  
   }
 
   // Fetch Current AUSD balance and Calculate unrecover part.
@@ -413,17 +479,13 @@ const process_one = async (
     crossed: ausd,
     spended: ausd_spent,
     current: ausd_balance,
-  };
+  }
 }
 
-function process_aggregated(e: { address: string,
-  crossed: string,
-  spended: bigint,
-  current: number | bigint,
-}) {
+function process_aggregated(e: { address: string; crossed: string; spended: bigint; current: number | bigint }) {
   summary_record.total_crossed += BigInt(e.crossed)
   summary_record.total_spended += BigInt(e.spended)
-  summary_record.total_current += BigInt(e.current)    
+  summary_record.total_current += BigInt(e.current)
 }
 
 function calculate_summary() {
@@ -438,7 +500,7 @@ function calculate_summary() {
   summary_results.sort((a, b) => Number(b.crossed) - Number(a.crossed))
 }
 
-function format_summary() {
+const format_summary = async () => {
   const format_summary_results = []
   for (const result of summary_results) {
     if (typeof result.address === 'undefined') {
@@ -452,8 +514,54 @@ function format_summary() {
       uncover: formatBalance(result.uncover, ausd_decimal),
     })
   }
-  console.log("\nSummary report of AUSD:", )
+  console.log('\nSummary report of AUSD:')
   table(format_summary_results)
+
+  await format_asset_info()
+}
+
+const format_asset_info = async () => {
+  console.log('\nSummary report of asset in/out:')
+  const format_asset_info = []
+  const address_asset_map: Map<string, Array<string>> = new Map()
+  for (let i = 0; i < asset_info.length; i++) {
+    const info = asset_info[i]
+    if (typeof info.address === 'undefined') {
+      continue
+    }
+    let current = address_asset_map.get(info.address)
+    if (typeof current === 'undefined') {
+      current = new Array<string>()
+    }
+    current.push(info.asset)
+    address_asset_map.set(info.address, current)
+  }
+  const address_asset_balances: Map<string, bigint> = new Map()
+  for (const [address, assets] of address_asset_map) {
+    const balances = await fetch_asset_balances(address, assets)
+    for (let i = 0; i < assets.length; i++) {
+      address_asset_balances.set(address.concat('-').concat(assets[i]), balances[i])
+    }
+  }
+  for (let i = 0; i < asset_info.length; i++) {
+    const info = asset_info[i]
+    if (typeof info.address === 'undefined') {
+      continue
+    }
+    const balance = address_asset_balances.get(info.address.concat('-').concat(info.asset))
+    format_asset_info.push({
+      address: info.address,
+      asset: info.asset,
+      in: info.in,
+      out: info.out,
+      diff: info.diff,
+      current: formatBalance(balance, decimalsMap.get(info.asset)),
+    })
+  }
+  table(format_asset_info)
+
+  // console.log("\nSummary report of asset transfer out:", )
+  // table(outasset_info)
 }
 
 runner()
@@ -469,11 +577,11 @@ runner()
         if (input_address !== addr) {
           continue
         }
-        const work_result = await get_events(addr, false)
-        const e = await process_one(addr, "0", work_result)
+        const work_result = await get_events(addr, true)
+        const e = await process_one(addr, '0', work_result)
         process_aggregated(e)
         calculate_summary()
-        format_summary()
+        await format_summary()
       }
     } else {
       // Work for one address.
@@ -481,44 +589,45 @@ runner()
         // Get Events
         const work_result = await get_events(addr)
         // Processing Events
-        return process_one(addr, ausd, work_result);
-      };
-      
+        return process_one(addr, ausd, work_result)
+      }
+
       // Work for all addresses.
-      const asyncFunc = async() => {
+      const asyncFunc = async () => {
         const workPromises = Array.from(addresses).map(async ([key, value]) => {
           const e = await work(key, value)
           process_aggregated(e)
         })
-        await Promise.all(workPromises);
+        await Promise.all(workPromises)
 
         calculate_summary()
-        format_summary()
-      };
+        await format_summary()
+      }
       await asyncFunc()
     }
 
     reset()
 
     // direct transfer to individual addresss
-    if (typeof dig_next_level !== 'undefined' && dig_next_level === "true") {
-      console.log("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀")
+    if (typeof dig_next_level !== 'undefined' && dig_next_level === 'true') {
+      console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀')
       const direct_transfers = []
       for (const [key, dests] of Object.entries(direct_addresses)) {
         for (const dest of dests.dest) {
-          console.log("\nQuery Transfers: ", key, " -> ", dest, ".")
+          console.log('\nQuery Transfers: ', key, ' -> ', dest, '.')
           direct_transfers.push({
             origin_address: key,
             dest_address: dest,
           })
-  
-          const work_result = await get_events(dest, true, key)
-          const e = await process_one(dest, "0", work_result)
+
+          const work_result = await get_events(dest, false)
+          const e = await process_one(dest, '0', work_result)
           process_aggregated(e)
-          
+          await format_asset_info()
+
           reset()
         }
-        console.log("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥")
+        console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥')
       }
     }
   })
