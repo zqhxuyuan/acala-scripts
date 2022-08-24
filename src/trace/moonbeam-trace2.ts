@@ -8,6 +8,7 @@ import runner from '../runner'
 const parachain = 'Moonbeam'
 
 const ausd_decimal = 12
+const mb_usd_token = 'xcaUSD'
 
 // Parachain info setup
 const parachain_info = new Map([
@@ -18,6 +19,7 @@ const parachain_info = new Map([
       subscanUrl: 'https://moonbeam.webapi.subscan.io',
       subsquidUrl: 'https://moonbeam.explorer.subsquid.io/graphql',
       beforeBlock: 1646592,
+      ausdToken: mb_usd_token
     },
   ],
 ])
@@ -66,35 +68,36 @@ const lpMap = new Map([
 
 // ERC20 address on Moonbeam that xtokens transfer out from Acala.
 // the amount is calculat on Acala, we can also get by Assets.Issued events.
-const addresses = new Map([
-  // ['0x80e639e6a2c90b05cdce2701a66ef096852093c8', '841325000000000000'],
-  // ['0x029dc993d0053b717a69cac26157f4ea466a907a', '816336247612289280'],
-  // ['0xb82ed2d0dfcd3ad43b3cbfab1f5e9c316f283f9c', '696772724164928000'],
-  ['0x57f73c4bff8ebe0fdd91c666fd304804d50fc218', '533926559077803008'],
-  ['0xa22868cfd826d0fcf543bdf1814e556e69903f11', '334484705589422144'],
-  ['0x30c4abab7ec022c27022aa39f687984e5acba13d', '308597168863638272'],
-  ['0x07d6e8987a17b95eee44fbd2b7bb65c34442a5c7', '305375328803483584'],
-  // ['0xb600e3b53dc0b8a941b92301f4411ac2e31ae4a2', '211192000000000000'],
-  // ['0x8ff448ed0c027dbe9f5add62e6faee439eac0259', '197064140914770368'],
-  // ['0x1cb3c6b77fde279cf7403a5c0ae2d5fc9d356a55', '127873035149662560'],
-  // ['0xebaee4e53e5c286c4b5f0027777eb72bc8b94bf7', '100650000003096976'],
-  // ['0x356eb354aea711854e1d69a36643e181a1da8ba5', '50000000000000000'],
-  // ['0x6b99b14cbed12e1f2b8c70681cce0874e24661ee', '45413922485320456'],
-  // ['0xd11b9d446a20b74d9fefb185d847692d84c4b95e', '19281268359725808'],
-  // ['0x4ac4ff89b9d4b3daf54942e3df63751a4a54c735', '18557886746006812'],
-  // ['0xbd03a214ebc891b3a9e3fe4cba793c5f9f0b38b0', '12600000000000000'],
-  // ['0x627683779b1fe41a2b350f67a9e8876def078cbb', '8857000000000000'],
-  // ['0x6ab079df6d9f2e6cad08736bba0fb8f35cc0ca40', '4808000000000000'],
-  // ['0x08c3e7b6e273d4434fa466ff23dba7c602a961a7', '3195769935409315'],
-  // ['0xcf43e9a2f9ed4810de89ae08d88445d8ccf63ab1', '2600000000000000'],
-  // ['0x66721389fd8f9403b1d161fc52b35f906d5421cc', '1288288208600000'],
-  // ['0x355b8f6059f5414ab1f69fca34088c4adc554b7f', '1000000000000000'],
-  // ['0x08abb2e7b586d80543b61daa91a9d134234d26d5', '889742268083292'],
-  // ['0x5f9febf1f2a99fe11edad119462db23f28a6ddbb', '431000000000000'],
-  // ['0x2b8221f97766b0498f4ac578871d088100176749', '264603693438244'],
-  // ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
-  // ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
-])
+const addresses: string[] = 
+  [
+    '0x80e639e6a2c90b05cdce2701a66ef096852093c8',
+  '0x029dc993d0053b717a69cac26157f4ea466a907a',
+  '0xb82ed2d0dfcd3ad43b3cbfab1f5e9c316f283f9c',
+  '0x57f73c4bff8ebe0fdd91c666fd304804d50fc218',
+  '0xa22868cfd826d0fcf543bdf1814e556e69903f11',
+  '0x30c4abab7ec022c27022aa39f687984e5acba13d',
+  '0x07d6e8987a17b95eee44fbd2b7bb65c34442a5c7',
+  '0xb600e3b53dc0b8a941b92301f4411ac2e31ae4a2',
+  '0x8ff448ed0c027dbe9f5add62e6faee439eac0259',
+  '0x1cb3c6b77fde279cf7403a5c0ae2d5fc9d356a55',
+  '0xebaee4e53e5c286c4b5f0027777eb72bc8b94bf7',
+  '0x356eb354aea711854e1d69a36643e181a1da8ba5',
+  '0x6b99b14cbed12e1f2b8c70681cce0874e24661ee',
+  '0xd11b9d446a20b74d9fefb185d847692d84c4b95e',
+  '0x4ac4ff89b9d4b3daf54942e3df63751a4a54c735',
+  '0xbd03a214ebc891b3a9e3fe4cba793c5f9f0b38b0',
+  '0x627683779b1fe41a2b350f67a9e8876def078cbb',
+  '0x6ab079df6d9f2e6cad08736bba0fb8f35cc0ca40',
+  '0x08c3e7b6e273d4434fa466ff23dba7c602a961a7',
+  '0xcf43e9a2f9ed4810de89ae08d88445d8ccf63ab1',
+  '0x66721389fd8f9403b1d161fc52b35f906d5421cc',
+  '0x355b8f6059f5414ab1f69fca34088c4adc554b7f',
+  '0x08abb2e7b586d80543b61daa91a9d134234d26d5',
+  '0x5f9febf1f2a99fe11edad119462db23f28a6ddbb',
+  '0x2b8221f97766b0498f4ac578871d088100176749',
+  '0xf4de3f93ebca01015486be5979d9c01aeeddd367',
+  '0xee7c4aca7d64075550f1b119b4bb4a0aa889c340',
+]
 
 // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
 
@@ -134,6 +137,7 @@ const query = gql`
           }
         ]
       }
+      limit: 200
     ) {
       id,
       block {
@@ -151,8 +155,43 @@ const query = gql`
   }
 `
 
-const processResult = (summary_results: any, addr: string, from = 'from', to = 'to') => {
-  return (summary_results.events as any[]).map((x: any) => ({
+const asset_issued = gql`
+  query q($query1: JSON, $query2: JSON) {
+    events(
+      where: {
+        AND: [
+          {
+            name_eq: "Assets.Issued",
+            block: {height_gte: ${parachain_info.get(parachain)!.beforeBlock}},
+            args_jsonContains: $query1,
+          }
+          {
+            name_eq: "Assets.Issued",
+            block: {height_gte: ${parachain_info.get(parachain)!.beforeBlock}},
+            args_jsonContains: $query2,            
+          }
+        ]
+      }
+      limit: 200
+    ) {
+      id,
+      block {
+        height
+      }
+      extrinsic {
+        indexInBlock
+        hash
+      }
+      call {
+        name
+      }
+      args
+    }
+  }
+  `
+
+const processResult = (response: any, addr: string, from = 'from', to = 'to') => {
+  return (response.events as any[]).map((x: any) => ({
     id: extract_event_index(x.id),
     height: x.block.height,
     extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
@@ -162,6 +201,21 @@ const processResult = (summary_results: any, addr: string, from = 'from', to = '
     asset: tokenMap.get(x.args.assetId) || parachain_info.get(parachain)!.defaultToken,
     amount: x.args.amount,
     kind: x.args['from'] === addr ? 'out' : 'in',
+  }))
+}
+
+const processIssuedResult = (response: any, addr: string) => {
+  return (response.events as any[]).map((x: any) => ({
+    id: extract_event_index(x.id),
+    height: x.block.height,
+    extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
+    extrinsicHash: x.extrinsic.hash,
+    from: "Acala XTokens",
+    to: addr,
+    // asset: tokenMap.get(x.args.assetId)!,
+    asset: mb_usd_token,
+    amount: x.args.totalSupply,
+    kind: 'in',
   }))
 }
 
@@ -175,38 +229,38 @@ const axios_api = axios.create({
   },
 })
 
-const fetch_asset_balance = async (address: string, asset = 'xcaUSD') => {
-  const {
-    data: { data },
-  } = await axios_api.post('/api/scan/account/tokens', {
-    address: address,
-  })
-  let balance = 0n
-  // GLMR in native
-  if (asset === parachain_info.get(parachain)?.defaultToken) {
-    const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.native
-    const filter = assets.filter((asset1) => asset1.symbol === asset)
-    if (typeof filter === 'undefined' || filter.length === 0) {
-      balance = 0n
-    } else {
-      balance = filter[0].balance
-    }
-  } else {
-    // assets: [xcaUSD, xcDOT, xcINTR, xcACA, xcIBTC]
-    if (typeof data.assets === 'undefined') {
-      balance = 0n
-    } else {
-      const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.assets
-      const filter = assets.filter((asset1) => asset1.symbol === asset)
-      if (typeof filter === 'undefined' || filter.length === 0) {
-        balance = 0n
-      } else {
-        balance = filter[0].balance
-      }
-    }
-  }
-  return balance
-}
+// const fetch_asset_balance = async (address: string, asset = mb_usd_token) => {
+//   const {
+//     data: { data },
+//   } = await axios_api.post('/api/scan/account/tokens', {
+//     address: address,
+//   })
+//   let balance = 0n
+//   // GLMR in native
+//   if (asset === parachain_info.get(parachain)?.defaultToken) {
+//     const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.native
+//     const filter = assets.filter((asset1) => asset1.symbol === asset)
+//     if (typeof filter === 'undefined' || filter.length === 0) {
+//       balance = 0n
+//     } else {
+//       balance = filter[0].balance
+//     }
+//   } else {
+//     // assets: [xcaUSD, xcDOT, xcINTR, xcACA, xcIBTC]
+//     if (typeof data.assets === 'undefined') {
+//       balance = 0n
+//     } else {
+//       const assets: [{ symbol: string; decimals: number; balance: bigint; assert_id: string }] = data.assets
+//       const filter = assets.filter((asset1) => asset1.symbol === asset)
+//       if (typeof filter === 'undefined' || filter.length === 0) {
+//         balance = 0n
+//       } else {
+//         balance = filter[0].balance
+//       }
+//     }
+//   }
+//   return balance
+// }
 
 const fetch_asset_balances = async (address: string, assets: string[]) => {
   const {
@@ -257,52 +311,24 @@ const fetch_asset_balances = async (address: string, assets: string[]) => {
   return balances
 }
 
-// const fetch_address_info = async (address: string) => {
-//   const {
-//     data: { data },
-//   } = await axios_api.post('/api/v2/scan/search', {
-//     key: address,
-//   })
-//   return {
-//     evm_contract: data.account.is_evm_contract,
-//     balance: data.account.balance,
-//   }
-// }
-
 // Gloabl share variable
-let summary_results = [{}] as [
-  {
-    address: string
-    crossed: bigint
-    spended: bigint
-    current: bigint
-    uncover: bigint
-  }
-]
-
-let summary_record = {
-  total_crossed: BigInt(0),
-  total_spended: BigInt(0),
-  total_current: BigInt(0),
-  total_uncover: BigInt(0),
-}
 let asset_info = [{}] as [
   {
     address: string
     asset: string
-    in: string
-    out: string
-    diff: string
+    in: bigint
+    out: bigint
+    diff: bigint
   }
 ]
-let outasset_info = [{}] as [
-  {
-    address: string
-    dest_addr: string
-    asset: string
-    amount: string
-  }
-]
+// let outasset_info = [{}] as [
+//   {
+//     address: string
+//     dest_addr: string
+//     asset: string
+//     amount: string
+//   }
+// ]
 
 const direct_addresses = {} as Record<string, { dest: Set<string> }>
 
@@ -315,7 +341,19 @@ const get_events = async (addr: string, print_record = false) => {
     acc2: { from: addr },
   })
   const events = processResult(response, addr)
-  events.sort((a, b) => {
+
+  const response2 = await request(parachain_info.get(parachain)!.subsquidUrl, asset_issued, {
+    query1: {
+      owner: addr
+    },
+    query2: {
+      assetId: "110021739665376159354538090254163045594"
+    }
+  })
+  const events2 = processIssuedResult(response2, addr)
+
+  const all_events = events.concat(events2)
+  all_events.sort((a, b) => {
     if (a.height === b.height) {
       return a.id - b.id
     } else {
@@ -324,7 +362,7 @@ const get_events = async (addr: string, print_record = false) => {
   })
 
   // raw event data
-  for (const e of events) {
+  for (const e of all_events) {
     records.push({
       evt: e.id,
       extrinsic: e.extrinsicIndex,
@@ -335,7 +373,6 @@ const get_events = async (addr: string, print_record = false) => {
       kind: e.kind,
     })
   }
-  // console.log("\nQuery Transfers:", addr, "...")
 
   if (print_record) {
     const format_records = []
@@ -356,46 +393,30 @@ const get_events = async (addr: string, print_record = false) => {
 }
 
 function reset() {
-  summary_results = [{}] as [
-    {
-      address: string
-      crossed: bigint
-      spended: bigint
-      current: bigint
-      uncover: bigint
-    }
-  ]
-  summary_record = {
-    total_crossed: BigInt(0),
-    total_spended: BigInt(0),
-    total_current: BigInt(0),
-    total_uncover: BigInt(0),
-  }
   // DO NOT RESET, AS IT'S USED AS NEXT LEVEL DIG.
   // direct_addresses = {} as Record<string, { dest: Set<string> }>
   asset_info = [{}] as [
     {
       address: string
       asset: string
-      in: string
-      out: string
-      diff: string
+      in: bigint
+      out: bigint
+      diff: bigint
     }
   ]
-  outasset_info = [{}] as [
-    {
-      address: string
-      dest_addr: string
-      asset: string
-      amount: string
-    }
-  ]
+  // outasset_info = [{}] as [
+  //   {
+  //     address: string
+  //     dest_addr: string
+  //     asset: string
+  //     amount: string
+  //   }
+  // ]
 }
 
 // Processing one address
-const process_one = async (
+const process_one = (
   addr: string,
-  ausd: string,
   work_result: {
     evt: number
     extrinsic: string
@@ -432,98 +453,42 @@ const process_one = async (
     }
   }
   // we could calcuate other asset
-  let ausd_spent = BigInt(0)
-  if (typeof total['xcaUSD'] !== 'undefined') {
+  // let ausd_spent = BigInt(0)
+  // if (typeof total[mb_usd_token] !== 'undefined') {
     // may not have xcaUSD output.
-    ausd_spent = total['xcaUSD'].value
-  }
+    // ausd_spent = total[mb_usd_token].value
+  // }
 
   // print all kind of asset diff in and out.
   for (const [asset, info] of Object.entries(total)) {
-    const decimal = decimalsMap.get(asset)
     asset_info.push({
       address: addr,
       asset,
-      in: formatBalance(info.in, decimal),
-      out: formatBalance(info.out, decimal),
-      diff: formatBalance(info.value, decimal),
+      in: info.in,
+      out: info.out,
+      diff: info.value,
     })
   }
 
   // print outgoing transfers to non contract evm account.
-  for (const [key, info] of Object.entries(direct_asset_amounts)) {
-    const key3 = key.split('-')
-    const dest = key3[0]
-    const asset = key3[1]
-    outasset_info.push({
-      address: addr,
-      dest_addr: dest,
-      asset: asset,
-      amount: formatBalance(info.balance, decimalsMap.get(asset)),
-    })
-  }
-
-  // Fetch Current AUSD balance and Calculate unrecover part.
-  const ausd_balance = await fetch_asset_balance(addr)
-  const uncover = BigInt(ausd) - BigInt(ausd_spent) - BigInt(ausd_balance)
-  summary_results.push({
-    address: addr,
-    crossed: BigInt(ausd),
-    spended: ausd_spent,
-    current: BigInt(ausd_balance),
-    uncover: uncover,
-  })
-
-  return {
-    address: addr,
-    crossed: ausd,
-    spended: ausd_spent,
-    current: ausd_balance,
-  }
-}
-
-function process_aggregated(e: { address: string; crossed: string; spended: bigint; current: number | bigint }) {
-  summary_record.total_crossed += BigInt(e.crossed)
-  summary_record.total_spended += BigInt(e.spended)
-  summary_record.total_current += BigInt(e.current)
-}
-
-function calculate_summary() {
-  const total_uncover = summary_record.total_crossed - summary_record.total_spended - summary_record.total_current
-  summary_results.push({
-    address: 'Total',
-    crossed: summary_record.total_crossed,
-    spended: summary_record.total_spended,
-    current: summary_record.total_current,
-    uncover: total_uncover,
-  })
-  summary_results.sort((a, b) => Number(b.crossed) - Number(a.crossed))
-}
-
-const format_summary = async () => {
-  const format_summary_results = []
-  for (const result of summary_results) {
-    if (typeof result.address === 'undefined') {
-      continue
-    }
-    format_summary_results.push({
-      address: result.address,
-      crossed: formatBalance(result.crossed, ausd_decimal),
-      spended: formatBalance(result.spended, ausd_decimal),
-      current: formatBalance(result.current, ausd_decimal),
-      uncover: formatBalance(result.uncover, ausd_decimal),
-    })
-  }
-  console.log('\nSummary report of AUSD:')
-  table(format_summary_results)
-
-  await format_asset_info()
+  // for (const [key, info] of Object.entries(direct_asset_amounts)) {
+  //   const key3 = key.split('-')
+  //   const dest = key3[0]
+  //   const asset = key3[1]
+  //   outasset_info.push({
+  //     address: addr,
+  //     dest_addr: dest,
+  //     asset: asset,
+  //     amount: formatBalance(info.balance, decimalsMap.get(asset)),
+  //   })
+  // }
 }
 
 const format_asset_info = async () => {
-  console.log('\nSummary report of asset in/out:')
+  console.error('Summary report of asset in/out:')
   const format_asset_info = []
   const address_asset_map: Map<string, Array<string>> = new Map()
+  // Query Address's Assets
   for (let i = 0; i < asset_info.length; i++) {
     const info = asset_info[i]
     if (typeof info.address === 'undefined') {
@@ -536,6 +501,7 @@ const format_asset_info = async () => {
     current.push(info.asset)
     address_asset_map.set(info.address, current)
   }
+  // Query balance of Address's all assets
   const address_asset_balances: Map<string, bigint> = new Map()
   for (const [address, assets] of address_asset_map) {
     const balances = await fetch_asset_balances(address, assets)
@@ -543,21 +509,42 @@ const format_asset_info = async () => {
       address_asset_balances.set(address.concat('-').concat(assets[i]), balances[i])
     }
   }
+  const total_of_ausd = {
+    in: BigInt(0),
+    out: BigInt(0),
+    diff: BigInt(0),
+    current: BigInt(0),
+  }
   for (let i = 0; i < asset_info.length; i++) {
     const info = asset_info[i]
     if (typeof info.address === 'undefined') {
       continue
     }
-    const balance = address_asset_balances.get(info.address.concat('-').concat(info.asset))
+    const balance = address_asset_balances.get(info.address.concat('-').concat(info.asset))!
+    const decimal = decimalsMap.get(info.asset)!
     format_asset_info.push({
       address: info.address,
       asset: info.asset,
-      in: info.in,
-      out: info.out,
-      diff: info.diff,
-      current: formatBalance(balance, decimalsMap.get(info.asset)),
+      in: formatBalance(info.in, decimal),
+      out: formatBalance(info.out, decimal),
+      diff: formatBalance(info.diff, decimal),
+      current: formatBalance(balance, decimal),
     })
+    if (info.asset === mb_usd_token) {
+      total_of_ausd.in += info.in
+      total_of_ausd.out += info.out
+      total_of_ausd.diff += info.diff
+      total_of_ausd.current += balance
+    }
   }
+  format_asset_info.push({
+    address: "Total",
+    asset: mb_usd_token,
+    in: formatBalance(total_of_ausd.in, ausd_decimal),
+    out: formatBalance(total_of_ausd.out, ausd_decimal),
+    diff: formatBalance(total_of_ausd.diff, ausd_decimal),
+    current: "-"
+  })
   table(format_asset_info)
 
   // console.log("\nSummary report of asset transfer out:", )
@@ -568,48 +555,104 @@ runner()
   .requiredNetwork(['acala'])
   .withApiPromise()
   .run(async ({ api: _api }) => {
-    const input_address = process.argv[2]
-    const dig_next_level = process.argv[3]
+    const input_address = process.argv[2].toLowerCase()
+    const command = process.argv[3]
+    let work_result: {
+      evt: number
+      extrinsic: string
+      from: string
+      to: string
+      asset: string
+      amount: string
+      kind: string
+    }[] = []
 
     // If specified one address, ignore other address.
-    if (typeof input_address !== 'undefined' && input_address !== 'ALL') {
-      for (const addr of addresses.keys()) {
-        if (input_address !== addr) {
-          continue
-        }
-        const work_result = await get_events(addr, true)
-        const e = await process_one(addr, '0', work_result)
-        process_aggregated(e)
-        calculate_summary()
-        await format_summary()
-      }
+    if (typeof input_address !== 'undefined' && input_address !== 'all') {
+        work_result = await get_events(input_address, true)
+        process_one(input_address, work_result)
+        await format_asset_info()
     } else {
       // Work for one address.
-      const work = async (addr: string, ausd: string) => {
+      const work = async (addr: string) => {
         // Get Events
-        const work_result = await get_events(addr)
+        const result = await get_events(addr)
         // Processing Events
-        return process_one(addr, ausd, work_result)
+        process_one(addr, result)
       }
 
       // Work for all addresses.
       const asyncFunc = async () => {
-        const workPromises = Array.from(addresses).map(async ([key, value]) => {
-          const e = await work(key, value)
-          process_aggregated(e)
+        const workPromises = Array.from(addresses).map(async (address) => {
+          await work(address)
         })
         await Promise.all(workPromises)
 
-        calculate_summary()
-        await format_summary()
+        await format_asset_info()
       }
       await asyncFunc()
     }
 
-    reset()
+    if (typeof command === 'undefined') {
+      return;
+    }
+
+    if (command.startsWith('trace')) {
+      const commands = command.split("-")
+      // trace, trace-
+      if (commands.length == 1 || (commands.length == 2 && commands[1] === '')) {
+        const incoming: Set<string> = new Set()
+        const outgoing: Set<string> = new Set()
+        for (const e of work_result) {
+          if (typeof lpMap.get(e.from) === 'undefined' && e.from !== input_address) {
+            incoming.add(e.from)
+          }
+          if (typeof lpMap.get(e.to) === 'undefined' && e.to !== input_address) {
+            outgoing.add(e.to)
+          }
+        }
+        console.log("incoming:", incoming)
+        console.log("outgoing:", outgoing)
+      } else {
+        // trace-2-b: trace two level before
+        // trace-2-a: trace two level after
+        // let cnt = commands[1]
+        // let dir = commands[2]
+        // const incoming: Set<string> = new Set()
+        // const outgoing: Set<string> = new Set()
+        // for (const e of work_result) {
+        //   if (typeof lpMap.get(e.from) === 'undefined' && e.from !== input_address) {
+        //     incoming.add(e.from)
+        //   }
+        //   if (typeof lpMap.get(e.to) === 'undefined' && e.to !== input_address) {
+        //     outgoing.add(e.to)
+        //   }
+        // }
+        // console.log("incoming:", incoming)
+        // console.log("outgoing:", outgoing)
+        // if (dir === 'b') {
+        //   for (const income of incoming) {
+        //     const incoming_before: Set<string> = new Set()
+        //     work_result = await get_events(income, false)
+        //     await process_one(income, work_result)
+        //     for (const e of work_result) {
+        //       if (typeof lpMap.get(e.from) === 'undefined' && e.from !== income) {
+        //         incoming_before.add(e.from)
+        //       }
+        //     }
+        //     console.log("  incoming before:", incoming_before)
+        //   }
+        // } else if (dir === 'a') {
+        // }
+      }
+
+      return;
+    }
 
     // direct transfer to individual addresss
-    if (typeof dig_next_level !== 'undefined' && dig_next_level === 'true') {
+    if (command === 'dig') {
+      reset()
+      
       console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀')
       const direct_transfers = []
       for (const [key, dests] of Object.entries(direct_addresses)) {
@@ -621,13 +664,15 @@ runner()
           })
 
           const work_result = await get_events(dest, false)
-          const e = await process_one(dest, '0', work_result)
-          process_aggregated(e)
+          process_one(dest, work_result)
           await format_asset_info()
 
           reset()
         }
-        console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥')
+        console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥')
       }
+      return;
     }
+
+    console.log(new Date())
   })
