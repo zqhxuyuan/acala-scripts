@@ -5,8 +5,9 @@ import { formatBalance, table } from '../log'
 import axios from 'axios'
 import runner from '../runner'
 
-// Moonbeam info setup
 const parachain = 'Moonbeam'
+
+// Parachain info setup
 const parachain_info = new Map([
   [
     'Moonbeam',
@@ -58,9 +59,10 @@ const lpMap = new Map([
   ['0x94f9eb420174b8d7396a87c27073f74137b40fe2', 'ZLK: xcDOT/WGLMR'],
   ['0x9de8171bebfa577d6663b594c60841fe096eff97', 'STELLA Rewarder'],
   ['0x7bc8b1b5aba4df3be9f9a32dae501214dc0e4f3f', 'NFT/ERC721'],
+  ['0xdfb7e426fbbbc83ccac49012f49e2a355d9353e8', '???']
 ])
 
-// ERC20 address on moombeam that xtokens transfer out from Acala.
+// ERC20 address on Moonbeam that xtokens transfer out from Acala.
 // the amount is calculat on Acala, we can also get by Assets.Issued events.
 const addresses = new Map([
   ['0x80e639e6a2c90b05cdce2701a66ef096852093c8', '841325000000000000'],
@@ -88,8 +90,8 @@ const addresses = new Map([
   ['0x08abb2e7b586d80543b61daa91a9d134234d26d5', '889742268083292'],
   ['0x5f9febf1f2a99fe11edad119462db23f28a6ddbb', '431000000000000'],
   ['0x2b8221f97766b0498f4ac578871d088100176749', '264603693438244'],
-  // ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
-  // ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
+  ['0xf4de3f93ebca01015486be5979d9c01aeeddd367', '5000000000000'],
+  ['0xee7c4aca7d64075550f1b119b4bb4a0aa889c340', '1000000000000'],
 ])
 
 // const truncate = (input: string) => input.length > 40 ? `${input.substring(0, 2)}...${input.substring(38)}` : input;
@@ -112,6 +114,7 @@ function extract_event_index(id: string): number {
   return Number(splits[1])
 }
 
+// limit: 100
 const query = gql`
   query q($acc1: JSON, $acc2: JSON) {
     events(
@@ -146,8 +149,8 @@ const query = gql`
   }
 `
 
-const processResult = (result: any, addr: string, from = 'from', to = 'to') => {
-  return (result.events as any[]).map((x: any) => ({
+const processResult = (summary_results: any, addr: string, from = 'from', to = 'to') => {
+  return (summary_results.events as any[]).map((x: any) => ({
     id: extract_event_index(x.id),
     height: x.block.height,
     extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
@@ -156,7 +159,7 @@ const processResult = (result: any, addr: string, from = 'from', to = 'to') => {
     to: x.args[to],
     asset: tokenMap.get(x.args.assetId) || parachain_info.get(parachain)!.defaultToken,
     amount: x.args.amount,
-    kind: x.args['from'] === addr ? 'in' : 'out',
+    kind: x.args['from'] === addr ? 'out' : 'in',
   }))
 }
 
@@ -201,119 +204,241 @@ const fetch_address_info = async (address: string) => {
   }
 }
 
+const get_events = async (addr: string, print_record = false) => {
+  const records = []
+
+  // Query Subsquid events and deal with responses.
+  const response = await request(parachain_info.get(parachain)!.subsquidUrl, query, {
+    acc1: { to: addr },
+    acc2: { from: addr },
+  })
+  const events = processResult(response, addr)
+  events.sort((a, b) => {
+    if (a.height === b.height) {
+      return a.id - b.id
+    } else {
+      return a.height - b.height
+    }
+  })
+
+  for (const e of events) {
+    // raw event data
+    records.push({
+      evt: e.id,
+      extrinsic: e.extrinsicIndex,
+      // from: format_address(e.from, addr),
+      // to: format_address(e.to, addr),
+      from: e.from,
+      to: e.to,
+      asset: e.asset,
+      amount: e.amount,
+      kind: e.kind
+    })
+  }
+
+  if (print_record) {
+    const format_records = []
+    console.log("Query Transfers: ", addr)
+    for (const e of records) {
+      format_records.push({
+        evt: e.evt,
+        extrinsic: e.extrinsic,
+        from: format_address(e.from, addr),
+        to: format_address(e.to, addr),
+        asset: e.asset,
+        amount: formatBalance(e.amount, decimalsMap.get(e.asset)),
+        kind: e.kind
+      })
+    }
+    table(format_records)
+  }
+  return records;
+}
+
 runner()
   .requiredNetwork(['acala'])
   .withApiPromise()
   .run(async ({ api: _api }) => {
-    const result = []
-    const summary = {
-      total_crossed: BigInt(0),
-      total_spended: BigInt(0),
-      total_current: BigInt(0),
-      total_uncover: BigInt(0),
-    }
-    const dest_individualstal = {} as Record<string, { dest: Set<string> }>
+    const ausd_decimal = 12
 
-    let print_one = false
-    let print_all = false
     const input_address = process.argv[2]
+    const dig_next_level = process.argv[3]
 
-    for (const [addr, ausd_total] of addresses) {
-      if (typeof input_address !== 'undefined') {
-        if (input_address === addr) {
-          print_one = true
-        } else if (input_address === 'ALL') {
-          print_all = true
-        } else {
+    // Gloabl variable
+    const direct_transfer_map = {} as Record<string, { dest: Set<string> }>
+    const direct_transfer_balance = new Map()
+
+    // If specified one address, ignore other address.
+    if (typeof input_address !== 'undefined' && input_address !== 'ALL') {
+      for (const addr of addresses.keys()) {
+        if (input_address !== addr) {
           continue
         }
+        await get_events(addr, true)
+      }
+    } else {
+      const summary_results = [{}] as [{
+        address: string,
+        crossed: bigint,
+        spended: bigint,
+        current: bigint,
+        uncover: bigint,
+        l1_balance: number
+      }]
+      const summary_record = {
+        total_crossed: BigInt(0),
+        total_spended: BigInt(0),
+        total_current: BigInt(0),
+        total_uncover: BigInt(0),
+        l1_balance: Number(0),
       }
 
-      const response = await request(parachain_info.get(parachain)!.subsquidUrl, query, {
-        acc1: { to: addr },
-        acc2: { from: addr },
-      })
-      const events = processResult(response, addr)
-      events.sort((a, b) => {
-        if (a.height === b.height) {
-          return a.id - b.id
-        } else {
-          return a.height - b.height
+      // Work for one address.
+      const work = async (addr: string, ausd: string) => {
+        // Get Events
+        const work_result = await get_events(addr)
+
+        // Calculate total AUSD spented.
+        const total = {} as Record<string, { token: string; value: bigint }>
+        for (const e of work_result) {
+          total[e.asset] = total[e.asset] || { token: e.asset, value: 0n }
+          // Normally out is less than in, for convenient calculate uncover, +out, -in
+          total[e.asset].value += e.kind === 'out' ? BigInt(e.amount) : -BigInt(e.amount)
+
+           // Get all addresses that's not LP/Contract for further dig.
+          if (addr === e.from && typeof lpMap.get(e.to) === 'undefined') {
+            direct_transfer_map[addr] = direct_transfer_map[addr] || { dest: new Set<string>([]) }
+            direct_transfer_map[addr].dest.add(e.to)
+          }
         }
-      })
+        // we could calcuate other asset
+        let ausd_spent = BigInt(0)
+        if (typeof total['xcaUSD'] !== 'undefined') { // may not have xcaUSD output.
+          ausd_spent = total['xcaUSD'].value
+        }
 
-      const record = []
-      const total = {} as Record<string, { token: string; value: bigint }>
-      for (const e of events) {
-        total[e.asset] = total[e.asset] || { token: e.asset, value: 0n }
-        total[e.asset].value += e.kind === 'in' ? BigInt(e.amount) : -BigInt(e.amount)
+        // aggregated first level transfers destination balance.
+        // Notice: there maybe same destnation for different origin address, don't calculate twice.
+        let l1_balance = Number(0)
+        for (const [key, dests] of Object.entries(direct_transfer_map)) {
+          if (key === addr) {
+            for (const dest of dests.dest) {
+              const account_info = await fetch_address_info(dest)
+              const exist_balance = direct_transfer_balance.get(dest)
+              if (typeof exist_balance === 'undefined') {
+                const balance = Number(account_info.balance)
+                l1_balance += balance
+                direct_transfer_balance.set(dest, balance)
+              }
+            }
+          }
+        }
 
-        // raw data
-        record.push({
-          evt: e.id,
-          extrinsic: e.extrinsicIndex,
-          from: format_address(e.from, addr),
-          to: format_address(e.to, addr),
-          asset: e.asset,
-          amount: formatBalance(e.amount, decimalsMap.get(e.asset)),
+        // Fetch Current AUSD balance and Calculate unrecover part.
+        const ausd_balance = await fetch_ausd_balance(addr)
+        const uncover = BigInt(ausd) - BigInt(ausd_spent) - BigInt(ausd_balance)
+        summary_results.push({
+          address: addr,
+          crossed: BigInt(ausd),
+          spended: ausd_spent,
+          current: BigInt(ausd_balance),
+          uncover: uncover,
+          l1_balance: l1_balance,
         })
 
-        // if destination address is not LP, but individual, then we added it for later second level dig
-        if (addr !== e.to && typeof lpMap.get(e.to) === 'undefined') {
-          dest_individualstal[addr] = dest_individualstal[addr] || { dest: new Set<string>([]) }
-          dest_individualstal[addr].dest.add(e.to)
+        return {
+          address: addr,
+          crossed: ausd,
+          spended: ausd_spent,
+          current: ausd_balance,
+          l1_balance: l1_balance,
+        };
+      };
+      
+      // Work for all addresses.
+      const asyncFunc = async() => {
+        const workPromises = Array.from(addresses).map(async ([key, value]) => {
+          const e = await work(key, value)
+          summary_record.total_crossed += BigInt(e.crossed)
+          summary_record.total_spended += BigInt(e.spended)
+          summary_record.total_current += BigInt(e.current)    
+          summary_record.l1_balance += e.l1_balance
+        })
+        await Promise.all(workPromises);
+        const total_uncover = summary_record.total_crossed - summary_record.total_spended - summary_record.total_current
+        summary_results.push({
+          address: 'Total',
+          crossed: summary_record.total_crossed,
+          spended: summary_record.total_spended,
+          current: summary_record.total_current,
+          uncover: total_uncover,
+          l1_balance: summary_record.l1_balance,
+        })
+        summary_results.sort((a, b) => Number(a.crossed) - Number(b.crossed))
+
+        const format_summary_results = []
+        for (const result of summary_results) {
+          if (typeof result.address === 'undefined') {
+            continue
+          }
+          format_summary_results.push({
+            address: result.address,
+            crossed: formatBalance(result.crossed, ausd_decimal),
+            spended: formatBalance(result.spended, ausd_decimal),
+            current: formatBalance(result.current, ausd_decimal),
+            uncover: formatBalance(result.uncover, ausd_decimal),
+            l1_balance: result.l1_balance.toFixed(0),
+          })
         }
-      }
-
-      if (print_one || print_all) {
-        console.log('address: >>', addr)
-        table(record)
-      }
-
-      let ausd_spent = BigInt(0)
-      if (typeof total['xcaUSD'] !== 'undefined') {
-        ausd_spent = total['xcaUSD'].value
-      }
-      const ausd_balance = await fetch_ausd_balance(addr)
-      const uncover_amount = BigInt(ausd_total) - BigInt(ausd_spent) - BigInt(ausd_balance)
-      result.push({
-        address: addr,
-        crossed: formatBalance(ausd_total, 12),
-        spended: formatBalance(ausd_spent, 12),
-        current: formatBalance(ausd_balance, 12),
-        uncover: uncover_amount < 1_000_000_000_000 ? 0 : formatBalance(uncover_amount, 12),
-      })
-      summary.total_crossed += BigInt(ausd_total)
-      summary.total_spended += BigInt(ausd_spent)
-      summary.total_current += BigInt(ausd_balance)
-      summary.total_uncover += uncover_amount
+        table(format_summary_results)
+      };
+      const begin = Date.parse(new Date().toString())
+      await asyncFunc()
+      const end = Date.parse(new Date().toString())
+      console.log("Query All Addresses Cost Time(s):", (end - begin)/1000)
     }
 
-    // direct transfer to individual addresss
     const direct_transfers = []
-    for (const [key, dests] of Object.entries(dest_individualstal)) {
+    for (const [key, dests] of Object.entries(direct_transfer_map)) {
       for (const dest of dests.dest) {
         const account_info = await fetch_address_info(dest)
         direct_transfers.push({
           origin_address: key,
           dest_address: dest,
           evm_contract: account_info.evm_contract,
-          dest_balance: account_info.balance,
+          dest_balance: Number(account_info.balance).toFixed(0),
         })
       }
     }
-    table(direct_transfers)
+    table(direct_transfers)    
 
-    result.push({
-      address: 'Total',
-      crossed: formatBalance(summary.total_crossed, 12),
-      spended: formatBalance(summary.total_spended, 12),
-      current: formatBalance(summary.total_current, 12),
-      uncover: formatBalance(summary.total_uncover, 12),
-    })
+    // direct transfer to individual addresss
+    if (typeof dig_next_level !== 'undefined' && dig_next_level === "true") {
+    //   console.log("digging.................................................")
+    //   const next_direct_transfer_map = {} as Record<string, { dest: Set<string> }>
+    //   const next_total = {} as Record<string, { token: string; value: bigint }>
+    //   const next_summary_results = [{}]
+    //   const next_summary_record = {
+    //     total_crossed: BigInt(0),
+    //     total_spended: BigInt(0),
+    //     total_current: BigInt(0),
+    //     total_uncover: BigInt(0),
+    //   }
+    //   for (const direct_transfer of direct_transfers) {
+    //     console.log("dig next level record:", direct_transfer.dest_address, "...")
+    //     await get_events(direct_transfer.dest_address, "0", next_total, 
+    //       next_direct_transfer_map, next_summary_results, next_summary_record
+    //     )        
+    //   }
+    //   next_summary_results.push({
+    //     address: 'Total',
+    //     crossed: formatBalance(next_summary_record.total_crossed, 12),
+    //     spended: formatBalance(next_summary_record.total_spended, 12),
+    //     current: formatBalance(next_summary_record.total_current, 12),
+    //     uncover: formatBalance(next_summary_record.total_uncover, 12),
+    //   })
 
-    // print summary if not specified address.
-    if (!print_one) {
-      table(result)
+    //   console.log("Summary of digging...")
+    //   table(next_summary_results)  
     }
   })
