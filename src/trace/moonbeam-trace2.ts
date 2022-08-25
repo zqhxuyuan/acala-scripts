@@ -19,7 +19,7 @@ const parachain_info = new Map([
       subscanUrl: 'https://moonbeam.webapi.subscan.io',
       subsquidUrl: 'https://moonbeam.explorer.subsquid.io/graphql',
       beforeBlock: 1646592,
-      ausdToken: mb_usd_token
+      ausdToken: mb_usd_token,
     },
   ],
 ])
@@ -48,6 +48,7 @@ const decimalsMap = new Map([
 // Moonbeam contracts map
 const lpMap = new Map([
   ['0xd95cab0ed89269390f2ad121798e6092ea395139', 'STELLA: xcaUSD/WGLMR'],
+  ['0xf47940b3592aa79675cccaa49d9df327515b260a', 'STELLA: xcaUSD/WGLMR'],
   ['0xa927e1e1e044ca1d9fe1854585003477331fe2af', 'STELLA: WGLMR/xcDOT'],
   ['0x4c5f99045af91d2b6d4fa0ea89fc47cf42711555', 'STELLA: WGLMR/xcIBTC'],
   ['0xd3dfb90f7996a97f9f394e130342485e37dd28f7', 'STELLA: WGLMR/xcINTR'],
@@ -68,9 +69,8 @@ const lpMap = new Map([
 
 // ERC20 address on Moonbeam that xtokens transfer out from Acala.
 // the amount is calculat on Acala, we can also get by Assets.Issued events.
-const addresses: string[] = 
-  [
-    '0x80e639e6a2c90b05cdce2701a66ef096852093c8',
+const addresses: string[] = [
+  '0x80e639e6a2c90b05cdce2701a66ef096852093c8',
   '0x029dc993d0053b717a69cac26157f4ea466a907a',
   '0xb82ed2d0dfcd3ad43b3cbfab1f5e9c316f283f9c',
   '0x57f73c4bff8ebe0fdd91c666fd304804d50fc218',
@@ -210,7 +210,7 @@ const processIssuedResult = (response: any, addr: string) => {
     height: x.block.height,
     extrinsicIndex: ''.concat(x.block.height).concat('-').concat(x.extrinsic.indexInBlock),
     extrinsicHash: x.extrinsic.hash,
-    from: "Acala XTokens",
+    from: 'Acala XTokens',
     to: addr,
     // asset: tokenMap.get(x.args.assetId)!,
     asset: mb_usd_token,
@@ -344,11 +344,11 @@ const get_events = async (addr: string, print_record = false) => {
 
   const response2 = await request(parachain_info.get(parachain)!.subsquidUrl, asset_issued, {
     query1: {
-      owner: addr
+      owner: addr,
     },
     query2: {
-      assetId: "110021739665376159354538090254163045594"
-    }
+      assetId: '110021739665376159354538090254163045594',
+    },
   })
   const events2 = processIssuedResult(response2, addr)
 
@@ -455,8 +455,8 @@ const process_one = (
   // we could calcuate other asset
   // let ausd_spent = BigInt(0)
   // if (typeof total[mb_usd_token] !== 'undefined') {
-    // may not have xcaUSD output.
-    // ausd_spent = total[mb_usd_token].value
+  // may not have xcaUSD output.
+  // ausd_spent = total[mb_usd_token].value
   // }
 
   // print all kind of asset diff in and out.
@@ -538,12 +538,12 @@ const format_asset_info = async () => {
     }
   }
   format_asset_info.push({
-    address: "Total",
+    address: 'Total',
     asset: mb_usd_token,
     in: formatBalance(total_of_ausd.in, ausd_decimal),
     out: formatBalance(total_of_ausd.out, ausd_decimal),
     diff: formatBalance(total_of_ausd.diff, ausd_decimal),
-    current: "-"
+    current: '-',
   })
   table(format_asset_info)
 
@@ -569,9 +569,9 @@ runner()
 
     // If specified one address, ignore other address.
     if (typeof input_address !== 'undefined' && input_address !== 'all') {
-        work_result = await get_events(input_address, true)
-        process_one(input_address, work_result)
-        await format_asset_info()
+      work_result = await get_events(input_address, true)
+      process_one(input_address, work_result)
+      await format_asset_info()
     } else {
       // Work for one address.
       const work = async (addr: string) => {
@@ -594,11 +594,12 @@ runner()
     }
 
     if (typeof command === 'undefined') {
-      return;
+      return
     }
 
     if (command.startsWith('trace')) {
-      const commands = command.split("-")
+      const commands = command.split('-')
+      const limit = 5
       // trace, trace-
       if (commands.length == 1 || (commands.length == 2 && commands[1] === '')) {
         const incoming: Set<string> = new Set()
@@ -611,49 +612,69 @@ runner()
             outgoing.add(e.to)
           }
         }
-        console.log("incoming:", incoming)
-        console.log("outgoing:", outgoing)
+        console.log('incoming:', incoming)
+        console.log('outgoing:', outgoing)
       } else {
         // trace-2-b: trace two level before
         // trace-2-a: trace two level after
         // let cnt = commands[1]
-        // let dir = commands[2]
-        // const incoming: Set<string> = new Set()
-        // const outgoing: Set<string> = new Set()
-        // for (const e of work_result) {
-        //   if (typeof lpMap.get(e.from) === 'undefined' && e.from !== input_address) {
-        //     incoming.add(e.from)
-        //   }
-        //   if (typeof lpMap.get(e.to) === 'undefined' && e.to !== input_address) {
-        //     outgoing.add(e.to)
-        //   }
-        // }
-        // console.log("incoming:", incoming)
-        // console.log("outgoing:", outgoing)
-        // if (dir === 'b') {
-        //   for (const income of incoming) {
-        //     const incoming_before: Set<string> = new Set()
-        //     work_result = await get_events(income, false)
-        //     await process_one(income, work_result)
-        //     for (const e of work_result) {
-        //       if (typeof lpMap.get(e.from) === 'undefined' && e.from !== income) {
-        //         incoming_before.add(e.from)
-        //       }
-        //     }
-        //     console.log("  incoming before:", incoming_before)
-        //   }
-        // } else if (dir === 'a') {
-        // }
+        const dir = commands[2]
+        const incoming: Set<string> = new Set()
+        const outgoing: Set<string> = new Set()
+        for (const e of work_result) {
+          if (typeof lpMap.get(e.from) === 'undefined' && e.from !== input_address) {
+            incoming.add(e.from)
+          }
+          if (typeof lpMap.get(e.to) === 'undefined' && e.to !== input_address) {
+            outgoing.add(e.to)
+          }
+        }
+        console.log('incoming:', incoming)
+        console.log('outgoing:', outgoing)
+        if (dir === 'b') {
+          for (const income of incoming) {
+            const incoming_before: Set<string> = new Set()
+            work_result = await get_events(income, false)
+            process_one(income, work_result)
+            for (const e of work_result) {
+              if (typeof lpMap.get(e.from) === 'undefined' && e.to === income) {
+                if (incoming_before.size < limit) {
+                  incoming_before.add(e.from)
+                } else {
+                  break
+                }
+              }
+            }
+            console.log('  incoming before:', income, '<--', incoming_before)
+          }
+        } else if (dir === 'a') {
+          for (const out of outgoing) {
+            const outgoing_after: Set<string> = new Set()
+            work_result = await get_events(out, false)
+            process_one(out, work_result)
+            for (const e of work_result) {
+              if (typeof lpMap.get(e.to) === 'undefined' && e.from === out) {
+                if (outgoing_after.size < limit) {
+                  outgoing_after.add(e.to)
+                } else {
+                  break
+                }
+              }
+            }
+            console.log('  outgoing after:', out, '<--', outgoing_after)
+          }
+        }
       }
 
-      return;
+      return
     }
 
     // direct transfer to individual addresss
     if (command === 'dig') {
       reset()
-      
+
       console.log('🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀')
+      console.log('direct transfer address:', direct_addresses)
       const direct_transfers = []
       for (const [key, dests] of Object.entries(direct_addresses)) {
         for (const dest of dests.dest) {
@@ -671,7 +692,7 @@ runner()
         }
         console.log('🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥')
       }
-      return;
+      return
     }
 
     console.log(new Date())
