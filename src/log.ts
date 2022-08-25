@@ -5,8 +5,9 @@
 import { FixedPointNumber } from '@acala-network/sdk-core'
 import { format } from '@fast-csv/format'
 import BN from 'bn.js'
+import yargs from 'yargs'
 
-import { config } from './runner'
+const output = (yargs.argv as any).output || 'console'
 
 let defaultPrecision = 3
 
@@ -56,10 +57,10 @@ export const formatBalance = (
 ) => {
   let n
   if (x == null) {
-    return '-'
+    return ''
   }
 
-  if (config.output === 'csv') {
+  if (output === 'csv-raw') {
     return x.toString()
   }
 
@@ -71,21 +72,23 @@ export const formatBalance = (
     n = +x.toString() / 10 ** decimal
   }
 
-  if (n > 1e9) {
-    return `${formatDecimal(n / 1e9, precision)}B`
-  }
-  if (n > 1e6) {
-    return `${formatDecimal(n / 1e6, precision)}M`
-  }
-  if (n > 1e3) {
-    return `${formatDecimal(n / 1e3, precision)}K`
+  if (output === 'console') {
+    if (Math.abs(n) > 1e9) {
+      return `${formatDecimal(n / 1e9, precision)}B`
+    }
+    if (Math.abs(n) > 1e6) {
+      return `${formatDecimal(n / 1e6, precision)}M`
+    }
+    if (Math.abs(n) > 1e3) {
+      return `${formatDecimal(n / 1e3, precision)}K`
+    }
   }
 
   return formatDecimal(n, precision).toString()
 }
 
 export const table = (data: any) => {
-  if (config.output === 'csv') {
+  if (output === 'csv') {
     console.log()
     const csvStream = format({ headers: true })
     csvStream.pipe(process.stdout)
